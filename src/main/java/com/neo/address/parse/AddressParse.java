@@ -1,21 +1,27 @@
 package com.neo.address.parse;
 
-import cn.hutool.core.collection.CollectionUtil;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.lang.Pair;
+//import cn.hutool.core.collection.CollectionUtil;
+//import cn.hutool.core.lang.Pair;
+
 import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.neo.address.util.CollectionUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -26,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 
 /**
  * 收货地址智能解析主类
@@ -74,7 +79,12 @@ public class AddressParse {
 
     static {
         Stopwatch stopwatch = Stopwatch.createStarted();
-        List<String> lines = FileUtil.readUtf8Lines(AddressParse.class.getResource(FILE_PATH));
+        List<String> lines = null;
+        try {
+            lines = Files.readAllLines(Paths.get(AddressParse.class.getResource(FILE_PATH).toURI()), StandardCharsets.UTF_8);
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
+        }
         String file = String.join(EMPTY, lines);
 
         Gson gson = new Gson();
@@ -130,7 +140,7 @@ public class AddressParse {
         address = StringUtils.replace(address, zipCode, BLANK);
 
         // 提取名字
-        Pair<String, String> nameInfo = parseName(EMPTY, address);
+        Map.Entry<String, String> nameInfo = parseName(EMPTY, address);
         address = nameInfo.getValue();
 
         List<ParseResult> results = parseArea(address);
@@ -143,7 +153,7 @@ public class AddressParse {
             r.setName(StringUtils.isBlank(r.getName()) ? nameInfo.getKey() : r.getName());
         }
 
-        if (CollectionUtils.isEmpty(results)) {
+        if (CollectionUtil.isEmpty(results)) {
             nameInfo = parseName(EMPTY, address);
             results.add(ParseResult.builder().name(nameInfo.getKey()).address(nameInfo.getValue()).build());
         }
@@ -221,8 +231,8 @@ public class AddressParse {
             if (Objects.nonNull(provinceMatch) && Objects.nonNull(cityMatch)
                     && StringUtils.isNotBlank(provinceMatch.getMatchName()) && StringUtils.isNotBlank(cityMatch.getMatchName())) {
                 List<ParseResult> tempResult = parseByArea(StringUtils.left(address, match.getIndex()));
-                if (CollectionUtils.isNotEmpty(tempResult)) {
-                    result = ParseResult.assign(result, CollectionUtil.getFirst(tempResult.iterator()));
+                if (!CollectionUtil.isEmpty(tempResult)) {
+                    result = ParseResult.assign(result, tempResult.isEmpty() ? null : tempResult.get(0));
                     address = StringUtils.right(address, match.getIndex());
 
 
@@ -465,15 +475,14 @@ public class AddressParse {
      * @author Neo
      * @since 2021/3/24 15:45
      */
-    public static Pair<String, String> parseName(String name, String address) {
+    public static Map.Entry<String, String> parseName(String name, String address) {
         if (StringUtils.isNotBlank(name)) {
-            return new Pair<>(name, address);
+            return new AbstractMap.SimpleEntry<>(name, address);
         }
 
-
         List<String> items = Splitter.on(BLANK).trimResults().omitEmptyStrings().splitToList(address);
-        if (CollectionUtils.size(items) < 2) {
-            return new Pair<>(name, address);
+        if (CollectionUtil.size(items) < 2) {
+            return new AbstractMap.SimpleEntry<>(name, address);
         }
         String parseName = items.get(0);
         for (String item : items) {
@@ -485,7 +494,7 @@ public class AddressParse {
         String finalParseName = parseName;
         address = items.stream().filter(i -> !StringUtils.equals(i, finalParseName)).collect(Collectors.joining(BLANK));
 
-        return new Pair<>(parseName, address);
+        return new AbstractMap.SimpleEntry<>(parseName, address);
     }
 
     /**
@@ -569,5 +578,7 @@ public class AddressParse {
         public int getMatchNameLength() {
             return StringUtils.length(this.matchName);
         }
+
     }
+
 }

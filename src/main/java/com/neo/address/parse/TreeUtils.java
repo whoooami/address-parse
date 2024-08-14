@@ -1,7 +1,7 @@
 package com.neo.address.parse;
 
 
-import org.apache.commons.collections4.CollectionUtils;
+import com.neo.address.util.CollectionUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
 
 /**
  * 将扁平数据构造成树结构
@@ -97,15 +98,15 @@ public class TreeUtils {
                                                                                     List<T> originData,
                                                                                     CharSequence spliterator,
                                                                                     Predicate<T> rootPredicate) {
-        if (Objects.isNull(model) || CollectionUtils.isEmpty(originData) || Objects.isNull(rootPredicate)) {
+        if (Objects.isNull(model) || CollectionUtil.isEmpty(originData) || Objects.isNull(rootPredicate)) {
             return Collections.EMPTY_LIST;
         }
 
-        List<T> result = new ArrayList<>(CollectionUtils.size(originData));
+        List<T> result = new ArrayList<>(CollectionUtil.size(originData));
 
         List<T> roots = originData.stream().filter(rootPredicate).sorted(Comparator.comparing(T::index)).collect(Collectors.toList());
 
-        if (CollectionUtils.isEmpty(roots)) {
+        if (CollectionUtil.isEmpty(roots)) {
             return Collections.EMPTY_LIST;
         }
 
@@ -144,7 +145,7 @@ public class TreeUtils {
 
         List<T> children = filterByParentId(parentNode.id(), originData);
 
-        if (CollectionUtils.isNotEmpty(children)) {
+        if (CollectionUtil.isNotEmpty(children)) {
             // 删除节点，避免重复遍历
             originData.removeAll(children);
         }
@@ -170,7 +171,7 @@ public class TreeUtils {
 
         result.add(parentNode);
 
-        if (CollectionUtils.isEmpty(children)) {
+        if (CollectionUtil.isEmpty(children)) {
             return result;
         }
 
@@ -195,7 +196,7 @@ public class TreeUtils {
     public static <T extends ITree<T, K>, K extends Serializable> T buildTreeAndPath(T parentNode, List<T> originData, CharSequence spliterator) {
         List<T> children = filterByParentId(parentNode.id(), originData);
 
-        if (CollectionUtils.isNotEmpty(children)) {
+        if (CollectionUtil.isNotEmpty(children)) {
             originData.removeAll(children);
         }
 
